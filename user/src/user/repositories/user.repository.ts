@@ -27,6 +27,7 @@ export interface UserRepository {
   updateById(id: string, params: UpdateUserEntityParams): Promise<UserEntity | null>;
   getAll(params: GetAllUsersParams): Promise<UserEntity[]>;
   deleteById(id: string): Promise<void>;
+  getTotalUsersCount(): Promise<number>;
 }
 
 @Injectable()
@@ -66,6 +67,10 @@ export class MongoUserRepository implements UserRepository {
     const skip = Math.max(0, (page - 1) * limit);
     const users = await this.userModel.find().skip(skip).limit(limit).lean().exec();
     return users.map(user => new MongoUserEntity(user));
+  }
+
+  public async getTotalUsersCount(): Promise<number> {
+    return this.userModel.countDocuments().exec();
   }
 
   public async deleteById(id: string): Promise<void> {

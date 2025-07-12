@@ -7,11 +7,12 @@ import { InjectUserEntityMapper } from '../decorators/inject-user-entity-mapper.
 import { UserEntityToDtoMapper } from '../entity-mappers';
 import { UserDto } from '../dto';
 
-export interface IUserService {
-  getUsers(params: GetAllUsersParams): Promise<UserDto[]>;
+export interface UserService {
+  getUsers(params: GetAllUsersParams): Promise<{ data: UserDto[], total: number }>;
   createUser(params: CreateUserParams): Promise<UserDto>;
   updateUser(id: string, params: UpdateUserParams): Promise<UserDto>;
   deleteUser(id: string): Promise<{ message: string }>;
+  getById(id: string): Promise<UserDto | null>;
 }
 
 export interface CreateUserParams {
@@ -30,7 +31,7 @@ export interface UpdateUserParams {
 }
 
 @Injectable()
-export class UserService implements IUserService{
+export class DefaultUserService implements UserService {
   constructor(
     @InjectRabbitmqService() private readonly client: ClientProxy,
     @InjectUserRepository() private readonly userRepository: UserRepository,
@@ -49,6 +50,16 @@ export class UserService implements IUserService{
     });
 
     return user;
+  }
+
+  public async getById(id: string) {
+    const userEntity = await this.userRepository.findById(id);
+
+    if (!userEntity) {
+      return null;
+    }
+
+    return this.userEntityMapper.mapOne(userEntity);
   }
 
   public async updateUser(id: string, params: UpdateUserParams) {
@@ -70,7 +81,9 @@ export class UserService implements IUserService{
       limit: Number(limit),
     });
 
-    return this.userEntityMapper.mapMany(users);
+    const totalUsersCount = await this.userRepository.getTotalUsersCount();
+
+    return { data: this.userEntityMapper.mapMany(users), total: totalUsersCount };
   }
 
   public async deleteUser(id: string) {

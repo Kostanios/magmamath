@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { UserController } from './controllers';
-import { UserService } from './services';
+import { DefaultUserService } from './services';
 import userModuleTokens from './user.module.tokens';
 import { RabbitmqModule } from '@app/rabbitmq';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -23,7 +23,7 @@ import { DefaultUserEntityToDtoMapper } from './entity-mappers';
     },
     {
       provide: userModuleTokens.UserService,
-      useClass: UserService
+      useClass: DefaultUserService
     },
     {
       provide: userModuleTokens.UserEntityMapper,
