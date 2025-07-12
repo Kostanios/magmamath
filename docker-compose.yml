@@ -1,0 +1,56 @@
+services:
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    healthcheck:
+      test: rabbitmqctl status
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      bash -c "rabbitmq-server & 
+      sleep 10 && 
+      rabbitmqadmin declare exchange name=user-notification type=topic && 
+      rabbitmqadmin declare queue name=user-notification durable=true && 
+      rabbitmqadmin declare binding source=user-notification destination=user-notification routing_key=user-notification && 
+      tail -f /dev/null"
+  user:
+    build:
+      context: ./user
+    ports:
+      - 3000:3000
+    depends_on:
+      - rabbitmq
+      - mongo
+    environment:
+#      RABBITMQ_URL: amqp://rabbitmq:5672
+#      RABBITMQ_QUEUE: user-notification
+      MONGODB_URI: mongodb://mongo:27017/user-db
+      PORT: 3000
+    command: npm run start
+    volumes:
+      - ./user:/app
+    working_dir: /app
+
+  notification:
+    build:
+      context: ./notification
+    ports:
+      - 3001:3001
+    depends_on:
+      - rabbitmq
+    environment:
+#      RABBITMQ_URL: amqp://rabbitmq:5672
+#      RABBITMQ_QUEUE: user-notification
+      PORT: 3001
+    command: npm run start
+    volumes:
+      - ./notification:/app
+    working_dir: /app
